@@ -9,11 +9,10 @@ import { CategoryService } from "../../category.service";
 import { MdDialogRef } from "@angular/material";
 import { ActivatedRoute } from '@angular/router';
 import { MdSnackBar } from '@angular/material';
-import {ImageCropperComponent, CropperSettings, CropperDrawSettings, Bounds} from 'ng2-img-cropper';
-import * as AWS from 'aws-sdk';
+import { ImageCropperComponent, CropperSettings, CropperDrawSettings, Bounds } from 'ng2-img-cropper';
 import { AuthService } from "../../auth.service";
 
-require('dotenv').config()
+import * as AWS from 'aws-sdk';
 
 @Component({
   selector: 'app-article-editor',
@@ -48,28 +47,26 @@ export class ArticleEditorComponent implements OnInit {
     private route: ActivatedRoute,
     private auth: AuthService,
     private snackBar: MdSnackBar) {
-      this.cropperSettings = new CropperSettings();
-      this.cropperSettings.noFileInput = true;
-      this.cropperSettings.width = 1600;
-      this.cropperSettings.height = 900;
-      this.cropperSettings.croppedWidth =1600;
-      this.cropperSettings.croppedHeight = 900;
-      this.cropperSettings.preserveSize = true;
-      this.cropperSettings.dynamicSizing = true;
-      this.cropperSettings.cropperClass = 'myCropper';
-      this.cropperSettings.croppingClass = 'myCropping';
+    this.cropperSettings = new CropperSettings();
+    this.cropperSettings.noFileInput = true;
+    this.cropperSettings.width = 1600;
+    this.cropperSettings.height = 900;
+    this.cropperSettings.croppedWidth = 1600;
+    this.cropperSettings.croppedHeight = 900;
+    this.cropperSettings.preserveSize = true;
+    this.cropperSettings.dynamicSizing = true;
+    this.cropperSettings.cropperClass = 'myCropper';
+    this.cropperSettings.croppingClass = 'myCropping';
 
-      this.cropperSettings.cropperDrawSettings = new CropperDrawSettings();
-      this.cropperSettings.cropperDrawSettings.strokeColor = '#fdfdfd';
-      this.cropperSettings.cropperDrawSettings.strokeWidth = 1;
-      this.data = {};
+    this.cropperSettings.cropperDrawSettings = new CropperDrawSettings();
+    this.cropperSettings.cropperDrawSettings.strokeColor = '#fdfdfd';
+    this.cropperSettings.cropperDrawSettings.strokeWidth = 1;
+    this.data = {};
     articleService.getTags().then((tags) => {
       this.articleTags = tags;
-      console.log(this.articleTags);
       for (let tag of tags) {
         this.autocompleteTags.push(tag.name);
       }
-      //console.log(this.articlesTags);
     });
     this.data = {};
   }
@@ -88,40 +85,45 @@ export class ArticleEditorComponent implements OnInit {
   }
 
   cropped(bounds: Bounds, article: any) {
-    console.log('on cropped');
 
   }
 
   onApplyCrop(article: any) {
-    this.isLoading = true;
-    AWS.config.credentials = {
-      accessKeyId: process.env.accessKeyId,
-      secretAccessKey: process.env.secretAccessKey
-    }
-    let _id = (+new Date).toString().concat('_') + this.articleDetail.header_image_name;
 
-    let s3Bucket = new AWS.S3({
-      params: { Bucket: 'cuongngo-news', Key: _id, ACL: 'public-read' },
-    })
+    let accessKeyId = '';
+    let secretAccessKey = '';
+    this.articleService.getAWSKey().then(res => {
+      accessKeyId = res.aws_id;
+      secretAccessKey = res.aws_secret;
 
-    let buf = new Buffer(article.image.replace(/^data:image\/\w+;base64,/, ""), 'base64')
-    let xdata: any = {
-      Key: _id,
-      Body: buf,
-      ContentEncoding: 'base64',
-      ContentType: 'image/jpeg'
-    };
-    let self = this;
-    s3Bucket.putObject(xdata, function (err, data) {
-      if (err) {
-        console.log(err);
-        console.log('Error uploading data: ', data);
-      } else {
-        console.log('succesfully uploaded the image!');
-        self.articleDetail.header_image = 'https://s3-ap-southeast-1.amazonaws.com/cuongngo-news/' + _id
-        self.isLoading = false;
+      this.isLoading = true;
+      AWS.config.credentials = {
+        accessKeyId: accessKeyId,
+        secretAccessKey: secretAccessKey
       }
-    });
+
+      let _id = (+new Date).toString().concat('_') + this.articleDetail.header_image_name;
+      let params = { Bucket: 'cuongngo-news', Key: _id, ACL: 'public-read' }
+      let s3Bucket = new AWS.S3({params: params})
+
+      let buf = new Buffer(article.image.replace(/^data:image\/\w+;base64,/, ""), 'base64')
+      let xdata: any = {
+        Key: _id,
+        Body: buf,
+        ContentEncoding: 'base64',
+        ContentType: 'image/jpeg'
+      };
+
+      let self = this;
+      s3Bucket.putObject(xdata, function (err, data) {
+        if (err) {
+          console.log('err:' + err);
+        } else {
+          self.articleDetail.header_image = 'https://s3-ap-southeast-1.amazonaws.com/cuongngo-news/' + _id
+          self.isLoading = false;
+        }
+      });
+    })
   }
 
   // TODO: Convert image from url to base 64
@@ -131,8 +133,6 @@ export class ArticleEditorComponent implements OnInit {
       if (params['id']) {
         this.articleService.getArticleDetail(params['id']).then(res => {
           this.articleDetail = res;
-          console.log('Article Detail');
-          console.log(this.articleDetail);
           this.data.image = res.header_image;
           var image: any = new Image();
           image.src = res.header_image;
@@ -170,12 +170,10 @@ export class ArticleEditorComponent implements OnInit {
       }
       article.tags = this.submittedTags;
     }
-    console.log('you submitted value:', article);
 
 
     if (article._id === undefined) {
       this.articleService.postArticle(article).then((res) => {
-        console.log('Article submitted to server !');
         this.openSnackBar('Article is created successfully', null);
         this.onCancel();
       }).catch(res => {

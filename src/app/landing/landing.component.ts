@@ -4,6 +4,10 @@ import { User } from './../user/user';
 import { Category } from './../category';
 import { Component, OnInit, HostListener } from '@angular/core';
 import { ArticleService } from "../article/article.service";
+import { UserService } from "../user/user.service";
+import { Article } from "../article/article";
+import 'rxjs/add/operator/toPromise';
+import {ComponentInteractionService } from "../component-interaction.service";
 
 @Component({
   selector: 'app-landing',
@@ -18,21 +22,22 @@ export class LandingComponent implements OnInit {
   backgroundUrl = [
     'https://i.ytimg.com/vi/GyUrxhPs7iw/maxresdefault.jpg',
     'http://orig05.deviantart.net/54fe/f/2015/065/0/6/tressor_by_jandyaditya-d8kov0q.png',
-    'http://wasiladev.com/wp-content/uploads/2017/03/seo.png',
+    'https://cdn.shutterstock.com/shutterstock/videos/23892799/thumb/8.jpg',
     'https://www.sketchappsources.com/resources/source-image/Xbox-One-Pad-dembsky.png',
     'https://i.ytimg.com/vi/t5CotvyUmb8/maxresdefault.jpg',
     'https://i.ytimg.com/vi/ROlYuWRGP0w/maxresdefault.jpg',
     'https://mir-s3-cdn-cf.behance.net/project_modules/fs/537d9047268173.587553663b674.png',
-    'http://www.gettingsmart.com/wp-content/uploads/2015/07/theory-vector-482x335.jpg'
-
+    'https://designmodo.com/wp-content/uploads/2013/04/92.jpg'
   ];
+
   config: Object = {
     pagination: '.swiper-pagination',
     paginationClickable: true,
-    autoplay: 5000
+    nextButton: '.swiper-button-next',
+    prevButton: '.swiper-button-prev',
+    autoplay: 3000
   };
-  //http://www.gettingsmart.com/wp-content/uploads/2015/07/theory-vector-482x335.jpg
-  //https://www.colourbox.com/preview/11546518-creative-science-flat-concept.jpg
+
   categoryPage: any;
   comingSoonCategoryLength: any;
   comingSoonCategory: any;
@@ -40,8 +45,14 @@ export class LandingComponent implements OnInit {
   activeTab: string = 'latest';
   inactiveTab: string = 'popular';
   totalComments: number;
+  recommendedArticles: Article[];
+  bookmarkedArticles: Article[];
+  defaultImage = 'assets/images/loading.gif';
+  idList = [];
 
-  constructor(private categoryService: CategoryService, private auth: AuthService, private articleServce: ArticleService) { }
+  constructor(private categoryService: CategoryService, private auth: AuthService,
+    private articleServce: ArticleService, private userService: UserService,
+    private sharedService: ComponentInteractionService) { }
 
   ngOnInit() {
     this.comingSoonCategoryLength = 0;
@@ -65,6 +76,25 @@ export class LandingComponent implements OnInit {
         }
       }
     );
+    if (this.auth.authenticated()) {
+      this.articleServce.getRecommendedArticles(this.auth.userProfile.identities[0].user_id).then(res => this.recommendedArticles = res);
+      this.userService.getBookmarks(this.auth.userProfile.identities[0].user_id).then(res => {
+        this.bookmarkedArticles = res
+        this.bookmarkedArticles.map((article) => this.idList.push(article._id));
+      });
+    }
+    this.sharedService.getLogged().subscribe(
+      (Logged: any) => {
+        console.log(Logged)
+        if (Logged != undefined) {
+          this.articleServce.getRecommendedArticles(Logged.identities[0].user_id).then(res => this.recommendedArticles = res);
+          this.userService.getBookmarks(Logged.identities[0].user_id).then(res => {
+            this.bookmarkedArticles = res
+            this.bookmarkedArticles.map((article) => this.idList.push(article._id));
+          });
+        }
+      }
+    )
   }
 
   checkProfile() {
@@ -85,33 +115,36 @@ export class LandingComponent implements OnInit {
     this.articleServce.getComments(articleId).then(res => this.totalComments = res.length);
   }
 
-  lastScrollTop = 0;
+  getCategoryName(categoryId) {
+    for (let category of this.categoryList) {
+      if (category._id == categoryId) {
+        return category.name.toLowerCase();
+      }
+    }
+  }
 
-  @HostListener('window:scroll', ['$event']) onScrollEvent($event) {
-    // let p = $('.latest-news-area').offset().top - $(window).height() * 0.1;
-    // let pos = document.body.scrollTop;
-    // if (pos == 0) {
-    //   $('html, body').animate({
-    //     scrollTop: p
-    //   }, 1000);
-    // }
-    // var st = $('body').scrollTop();
-    
-    // if (st > this.lastScrollTop) {
-    //   console.log('down')
-    //   console.log(pos); 
-    //   console.log(p);
-    //   if (pos < p) {
-    //     console.log('animate is trigger')
-    //     $('html, body').animate({
-    //       scrollTop: p
-    //     }, 1000);
-    //   } else {
-    //     console.log('pos is greater than p')
-    //   }
-    // } else {
-    //   console.log('up')
-    // }
-    // this.lastScrollTop = st;
+  removeBookmark(articleId: string) {
+    this.userService.toggleBookmark(this.auth.userProfile.identities[0].user_id, articleId).then((res) => {
+      if (res.status == 202) {
+        this.userService.getBookmarks(this.auth.userProfile.identities[0].user_id).then(res => this.bookmarkedArticles = res);
+      }
+    })
+  }
+
+  toggleBookmark(articleId) {
+    let userId = this.auth.userProfile.identities[0].user_id;
+    this.userService.toggleBookmark(userId, articleId).then((res) => {
+      if (res.status == 202) {
+        this.checkBookmarked(articleId, userId)
+      }
+    });
+  }
+
+  checkBookmarked(articleId: string, userId: string): Promise<any> {
+    return this.userService.getBookmarks(userId).then((res) => {
+      this.bookmarkedArticles = res;
+      this.idList = [];
+      this.bookmarkedArticles.map((article) => this.idList.push(article._id));
+    })
   }
 }

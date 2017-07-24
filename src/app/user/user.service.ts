@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core'
-import { Http } from '@angular/http';
+import { Http, RequestOptions, Headers } from '@angular/http';
 import { User } from './user';
 import { Comment } from '../comment';
+import { Article } from '../article/article';
 import { Observable } from "rxjs/Observable";
 import { SocketIOService } from "../socket.io/socket-io.service";
 import 'rxjs/add/operator/toPromise';
@@ -19,11 +20,16 @@ export class UserService {
     constructor(private http: Http, private socketService: SocketIOService) { }
 
     getUserAccounts(): Promise<User[]> {
-        return this.http.get(this.apiUrl + 'users').toPromise().then(response => response.json()).catch(this.handleError);
+        let userToken = localStorage.getItem('id_token');
+        let headers = new Headers({ 'Content-Type': 'application/json' });
+        headers.append('Authorization', userToken);
+        let options = new RequestOptions({ headers: headers });
+        return this.http.get(this.apiUrl + 'users', options).toPromise().then(response => response.json()).catch(this.handleError);
     }
 
     getUserAccount(userId: number): Promise<User> {
         return this.http.get(this.apiUrl + 'users/' + userId).toPromise().then(response => response.json()).catch(this.handleError);
+        
     }
 
     getUserProfileImage(userId: string): Promise<string> {
@@ -32,7 +38,12 @@ export class UserService {
 
     toggleStatus(userId: string) {
         let putUrl = this.apiUrl + 'users/' + userId + '/toggleStatus';
-        return this.http.put(putUrl, {}).toPromise().then(response => response).catch(this.handleError);
+        let userToken = localStorage.getItem('id_token');
+        let headers = new Headers({ 'Content-Type': 'application/json' });
+        headers.append('Authorization', userToken);
+        let options = new RequestOptions({ headers: headers });
+
+        return this.http.put(putUrl, {}, options).toPromise().then(response => response).catch(this.handleError);
     }
 
     unlockUser(userId: string) {
@@ -42,7 +53,11 @@ export class UserService {
 
     markAllNotificationAsSeen(userId: string) {
         let postUrl = this.apiUrl + 'notifications/users/' + userId + '/seenAll';
-        this.http.post(postUrl, {}).toPromise().then(response => response).catch(this.handleError);
+        let userToken = localStorage.getItem('id_token');
+        let headers = new Headers({ 'Content-Type': 'application/json' });
+        headers.append('Authorization', userToken);
+        let options = new RequestOptions({ headers: headers });
+        this.http.post(postUrl, {}, options).toPromise().then(response => response).catch(this.handleError);
     }
 
     markNotificationAsRead(userId: string, notificationId: string) {
@@ -50,6 +65,16 @@ export class UserService {
         this.http.put(putUrl, {}).toPromise().then(response => {
             this.socketService.markNotificationAsRead(userId);
         }).catch(this.handleError);
+    }
+    // '/:userId/articles/:articleId/toggleBookmark'
+    toggleBookmark(userId: string, articleId: string) {
+        let url = this.apiUrl + 'users/' + userId + '/articles/' + articleId + '/toggleBookmark';
+        return this.http.put(url, {}).toPromise().then(res => res).catch(this.handleError);
+    }
+
+    getBookmarks(userId: string): Promise<Article[]> {
+        let url = this.apiUrl + 'users/' + userId + '/articles/bookmarks';
+        return this.http.get(url).toPromise().then(res => res.json()).catch(this.handleError);
     }
 
     private handleError(error: any): Promise<any> {

@@ -1,4 +1,3 @@
-import { InfiniteScrollModule } from 'angular2-infinite-scroll';
 import { Ng2OrderModule } from 'ng2-order-pipe';
 import { UserComponent } from './user/user.component';
 import { BrowserModule } from '@angular/platform-browser';
@@ -9,15 +8,13 @@ import { RouterModule, Routes } from '@angular/router';
 import { AuthService } from './auth.service';
 
 import { MaterialModule } from '@angular/material';
-import { CollapseDirective } from 'ng2-bootstrap';
 
-import { TagInputModule } from "ng2-tag-input";
+import { TagInputModule } from "ngx-chips";
 
 
 import { AppComponent } from './app.component';
 import { ArticleComponent } from './article/article.component';
 import { AppRoutes } from './app.routing';
-import { LoginComponent } from './login/login.component';
 import { ShareButtonsModule } from 'ngx-sharebuttons';
 import { ArticleDetailComponent } from './article-detail/article-detail.component';
 import { AdminComponent } from './admin/admin.component';
@@ -35,7 +32,6 @@ import {
 } from 'primeng/primeng';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { CKEditorModule } from 'ng2-ckeditor';
-import { Slide2Component } from './slide-2/slide-2.component';
 import { ModifyCommentDialogComponent } from './comment-dialog/modify-comment-dialog/modify-comment-dialog.component';
 import { RemoveCommentDialogComponent } from './comment-dialog/remove-comment-dialog/remove-comment-dialog.component';
 import { Ng2PaginationModule} from 'ng2-pagination';
@@ -43,7 +39,7 @@ import { ReversePipe } from './reverse.pipe';
 import { ArticleEditorComponent } from './articles-list/article-editor/article-editor.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ConfirmDialogComponent } from './confirm-dialog/confirm-dialog.component';
-import { ImageCropperComponent } from 'ng2-img-cropper';
+import { ImageCropperModule } from 'ng2-img-cropper';
 import { CommentComponent } from './article-detail/comment/comment.component';
 import { MentionModule } from 'angular2-mentions/mention';
 import { SwiperModule } from 'angular2-useful-swiper';
@@ -53,13 +49,17 @@ import { CategoryTimelineComponent } from './landing/category-timeline/category-
 import {MomentModule} from 'angular2-moment';
 import {ScrollToModule} from 'ng2-scroll-to';
 import {Ng2PageScrollModule} from 'ng2-page-scroll';
+import { BookmarkComponent } from './bookmark/bookmark.component';
+import { FlexLayoutModule } from '@angular/flex-layout';
+import { LazyLoadImageModule } from 'ng-lazyload-image';
+import { InfiniteScrollModule } from 'ngx-infinite-scroll';
+import { TagsListComponent } from './tags-list/tags-list.component';
+import { ComponentInteractionService } from './component-interaction.service';
 
 @NgModule({
   declarations: [
     AppComponent,
     ArticleComponent,
-    CollapseDirective,
-    LoginComponent,
     ArticleDetailComponent,
     AdminComponent,
     UserComponent,
@@ -69,22 +69,22 @@ import {Ng2PageScrollModule} from 'ng2-page-scroll';
     ModifyCommentDialogComponent,
     RemoveCommentDialogComponent,
     DashboardComponent,
-    Slide2Component,
     ReversePipe,
     ArticleEditorComponent,
     ConfirmDialogComponent,
-    ImageCropperComponent,
     CommentComponent,
     SwiperComponent,
     LandingComponent,
     CategoryTimelineComponent,
+    BookmarkComponent,
+    TagsListComponent,
   ],
   imports: [
     BrowserModule,
     FormsModule,
     HttpModule,
     MaterialModule,
-    RouterModule.forRoot(AppRoutes),
+    RouterModule.forRoot(AppRoutes, { useHash: true} ),
     ShareButtonsModule,
     DataTableModule,
     ButtonModule,
@@ -102,13 +102,16 @@ import {Ng2PageScrollModule} from 'ng2-page-scroll';
     MentionModule,
     SwiperModule,
     Ng2OrderModule,
-    InfiniteScrollModule,
     MomentModule,
     ShareButtonsModule.forRoot(),
     ScrollToModule.forRoot(),
-    Ng2PageScrollModule.forRoot()
+    Ng2PageScrollModule.forRoot(),
+    FlexLayoutModule,
+    LazyLoadImageModule,
+    InfiniteScrollModule,
+    ImageCropperModule,
   ],
-  providers: [AuthGuard, AuthService, SocketIOService, LocalStorageService],
+  providers: [AuthGuard, AuthService, SocketIOService, LocalStorageService, ComponentInteractionService],
   bootstrap: [AppComponent],
   entryComponents: [
     ConfirmDialogComponent,

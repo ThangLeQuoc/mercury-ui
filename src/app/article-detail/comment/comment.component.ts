@@ -32,10 +32,12 @@ export class CommentComponent implements OnInit {
 
   order = 'text';
   reverse = false;
-  isActive = 'best';
+  isActive = 'newest';
   commentLimit = 10;
 
   commentText: string = "";
+
+  currentUserImagePath: string = "";
   private mentionParticipants: string[] = [];
   private mentionedParticipants: string[] = [];
 
@@ -50,6 +52,11 @@ export class CommentComponent implements OnInit {
 
   ngOnInit() {
     let user_id = this.authService.authenticated() ? this.authService.userProfile.identities[0].user_id : '';
+    if (user_id) {
+      this.userService.getUserProfileImage(user_id).then((imgPath) => {
+        this.currentUserImagePath = imgPath;
+      });
+    }
 
     this.comment = { _id: '', user_id: user_id, text: '', date: new Date() };
     this.sub = this.route.params.subscribe(params => {
@@ -117,7 +124,17 @@ export class CommentComponent implements OnInit {
   onSubmit(comment: Comment) {
     /* Post comment */
     this.articleService.postComment(this.articleId, comment).then(res => {
-      this.articleService.getComments(this.articleId).then(res => this.comments = res.comments);
+      this.articleService.getComments(this.articleId).then(res => {
+        this.comments = res.comments;
+        this.articleService.getParticipants(this.articleId).then(res => {
+          this.participants = res;
+          for (let participant of this.participants) {
+            if (participant.user_id !== this.localStorageService.getUserId()) {
+              this.mentionParticipants.push(participant.username);
+            }
+          }
+        });
+      });
       this.comment.text = '';
 
 
@@ -186,5 +203,9 @@ export class CommentComponent implements OnInit {
     if (this.commentLimit > this.comments.length) {
       this.commentLimit = this.comments.length;
     }
+  }
+
+  collapse() {
+    this.commentLimit = 10;
   }
 }

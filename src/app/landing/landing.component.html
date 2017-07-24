@@ -1,9 +1,9 @@
-<div class="side-nav-content" #snc *ngIf="categoryList" (scroll)="onScroll($event)">
+<div class="side-nav-content" #snc *ngIf="categoryList">
   <swiper [config]="config">
     <div class="swiper-wrapper">
       <md-grid-list cols="2" rowHeight="fit" class="landing swiper-slide" *ngFor="let page of categoryPage; let j = index;">
         <md-grid-tile *ngFor="let category of page; let i = index">
-          <div class="swiper-slide header clickable" [ngStyle]="{'background-image': 'linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0)), url(' + backgroundUrl[4 * j + i] + ')', 'background-repeat':'round'}"
+          <div class="swiper-slide header clickable" [defaultImage]="defaultImage" [lazyLoad]="backgroundUrl[4 * j + i]"
             [routerLink]="['/news', category.name | lowercase]">
             <div [class]="'header header-' + i">
               <div class="flex-col-start"></div>
@@ -31,18 +31,72 @@
         </ng-template>
       </md-grid-list>
     </div>
-    <div class="swiper-pagination swiper-pagination-white"></div>
+    <!--<div class="swiper-pagination swiper-pagination-white"></div>-->
+    <div class="swiper-button-next swiper-button-white"></div>
+    <div class="swiper-button-prev swiper-button-white"></div>
   </swiper>
   <div class="latest-news-area">
     <md-tab-group md-stretch-tabs>
+      <md-tab label="Recommended" *ngIf="auth.authenticated() && auth.userProfile">
+        <div fxLayout='row wrap' *ngIf="recommendedArticles">
+          <div fxFlex fxFlex="33%" fxFlex.sm="50%" fxFlex.xs="100%" style="padding: 20px;" *ngFor="let recommended of recommendedArticles">
+            <md-card class="recommended-card" style="height: 100%; position: relative;">
+              <md-card-header>
+                <div md-card-avatar class="author-image">
+                  <img [src]="recommended.author ? 'https://cdn.auth0.com/avatars/' + recommended.author[0].toLowerCase() + '.png' : 'https://cdn.auth0.com/avatars/m.png'" alt="avatar" style="width: 100%; border-radius: 50%;">
+                </div>
+                <md-card-title md-line>{{recommended.title}}</md-card-title>
+                <md-card-subtitle md-line>{{recommended.author}}</md-card-subtitle>
+              </md-card-header>
+              <img md-card-image [src]="recommended.header_image ? recommended.header_image : 'http://www.bluthemes.com/assets/img/blog/12/balloon.jpg'">
+              <md-card-content style="margin-bottom: 50px;">
+                <p>
+                  {{recommended.description}}
+                </p>
+              </md-card-content>
+              <md-card-actions style="position: absolute; bottom: 24px; left: 0; right: 0; margin: auto;">
+                <button md-button color="primary" [routerLink]="['/news', getCategoryName(recommended.category), recommended._id]" style="margin-left: 16px;">READ MORE</button>
+                <button md-icon-button class="pull-right" shareButton="facebook" style="margin-right: 16px;"><md-icon>share</md-icon></button>
+                <button md-icon-button class="pull-right" (click)="toggleBookmark(recommended._id)"><md-icon>{{ idList.includes(recommended._id) ? 'favorite' : 'favorite_border' }}</md-icon></button>
+              </md-card-actions>
+            </md-card>
+          </div>
+        </div>
+      </md-tab>
+      <md-tab label="Bookmark" *ngIf="auth.authenticated() && auth.userProfile">
+        <div fxLayout='row wrap' *ngIf="bookmarkedArticles">
+          <div fxFlex fxFlex="33%" fxFlex.sm="50%" fxFlex.xs="100%" style="padding: 20px;" *ngFor="let bookmarked of bookmarkedArticles">
+            <md-card class="bookmarked-card" style="height: 100%; position: relative;">
+              <md-card-header>
+                <div md-card-avatar class="author-image">
+                  <img [src]="bookmarked.author ? 'https://cdn.auth0.com/avatars/' + bookmarked.author[0].toLowerCase() + '.png' : 'https://cdn.auth0.com/avatars/m.png'" alt="avatar" style="width: 100%; border-radius: 50%;">
+                </div>
+                <md-card-title md-line>{{bookmarked.title}}</md-card-title>
+                <md-card-subtitle md-line>{{bookmarked.author || 'Mercury Crew'}}</md-card-subtitle>
+              </md-card-header>
+              <img md-card-image [src]="bookmarked.header_image ? bookmarked.header_image : 'http://www.bluthemes.com/assets/img/blog/12/balloon.jpg'">
+              <md-card-content style="margin-bottom: 50px;">
+                <p>
+                  {{bookmarked.description}}
+                </p>
+              </md-card-content>
+              <md-card-actions style="position: absolute; bottom: 24px; left: 0; right: 0; margin: auto;">
+                <button md-button color="primary" [routerLink]="['/news', getCategoryName(bookmarked.category), bookmarked._id]" style="margin-left: 16px;">READ MORE</button>
+                <button md-icon-button class="pull-right" shareButton="twitter" style="margin-right: 16px;"><md-icon>share</md-icon></button>
+                <button md-icon-button class="pull-right" (click)="removeBookmark(bookmarked._id)"><md-icon>favorite</md-icon></button>
+              </md-card-actions>
+            </md-card>
+          </div>
+        </div>
+      </md-tab>
       <md-tab label="Lastest">
         <div *ngFor="let category of categoryList" class="category-timeline-container">
-          <app-category-timeline [category]="category" [type]="latest"></app-category-timeline>
+          <app-category-timeline [category]="category" [articleType]="'latest'"></app-category-timeline>
         </div>
       </md-tab>
       <md-tab label="Popular">
         <div *ngFor="let category of categoryList" class="category-timeline-container">
-          <app-category-timeline [category]="category" [type]="popular"></app-category-timeline>
+          <app-category-timeline [category]="category" [articleType]="'popular'"></app-category-timeline>
         </div>
       </md-tab>
     </md-tab-group>

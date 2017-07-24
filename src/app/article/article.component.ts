@@ -1,5 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ArticleService } from './article.service';
+import { UserService } from '../user/user.service';
+import { AuthService } from '../auth.service';
 import { Article } from './article';
 import { Input } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
@@ -19,15 +21,18 @@ export class ArticleComponent implements OnInit, OnDestroy {
   publishedArticles: Article[] = [];
   array = [];
   infiniteArticles: Article[] = [];
-  sum = 6;
+  sum = 10;
   throttle = 400;
   scrollDistance = 0;
   articleIndex = 4;
   isLoading = false;
   isFinish = false;
   private sub: any;
+  isBookmark: boolean = false;
+  bookmarkedArticles: Article[] = [];
+  idList = [];
 
-  constructor(private articleService: ArticleService, private route: ActivatedRoute) {
+  constructor(private articleService: ArticleService, private route: ActivatedRoute, private userService: UserService, private authService: AuthService) {
   }
 
 
@@ -50,6 +55,13 @@ export class ArticleComponent implements OnInit, OnDestroy {
         }
       );
     });
+
+    if (this.authService.authenticated()) {
+      this.userService.getBookmarks(this.authService.userProfile.identities[0].user_id).then(res => {
+        this.bookmarkedArticles = res
+        this.bookmarkedArticles.map((article) => this.idList.push(article._id));
+      });
+    };
   }
 
   ngOnDestroy() {
@@ -74,9 +86,26 @@ export class ArticleComponent implements OnInit, OnDestroy {
     this.sum += 6;
     this.isLoading = true;
     let self = this;
-    setTimeout(function () {
+    setTimeout(function() {
       self.addItems(this.articleIndex, this.sum);
       self.isLoading = false;
     }, 1000);
+  }
+
+  toggleBookmark(articleId: string) {
+    let userId = this.authService.userProfile.identities[0].user_id;
+    this.userService.toggleBookmark(userId, articleId).then((res) => {
+      if (res.status == 202) {
+        this.checkBookmarked(articleId, userId);
+      }
+    });
+  }
+
+  checkBookmarked(articleId: string, userId: string): Promise<any> {
+    return this.userService.getBookmarks(userId).then((res) => {
+      this.bookmarkedArticles = res;
+      this.idList = [];
+      this.bookmarkedArticles.map((article) => this.idList.push(article._id));
+    })
   }
 }

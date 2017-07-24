@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Article } from './article';
 import { Comment } from '../comment';
-import { Http, Headers, RequestOptions } from '@angular/http';
+import { Http, Headers, RequestOptions, URLSearchParams } from '@angular/http';
 import { SocketIOService } from "../socket.io/socket-io.service";
 import 'rxjs/add/operator/toPromise';
 
@@ -12,6 +12,9 @@ export class ArticleService {
 
   constructor(private http: Http, private socketIOService: SocketIOService) { }
 
+  getRecommendedArticles(userId): Promise<Article[]> {
+    return this.http.get(this.apiUrl + 'articles/users/' + userId + '/suggestions').toPromise().then(res => res.json()).catch(this.handleError);
+  }
   // get articles of selected category
   getArticles(name: string): Promise<Article[]> {
     let articleUrl: string;
@@ -20,7 +23,6 @@ export class ArticleService {
     } else {
       articleUrl = this.apiUrl + 'categories/' + name + '/articles';
     }
-    console.log(articleUrl);
     return this.http.get(articleUrl)
       .toPromise()
       .then(response => response.json())
@@ -29,7 +31,6 @@ export class ArticleService {
 
   // get article detail by articleID
   getArticleDetail(id: string): Promise<Article> {
-
     if (id === undefined) {
       return null;
     } else {
@@ -41,23 +42,29 @@ export class ArticleService {
 
   postArticle(article: Article) {
     let body = JSON.stringify(article);
-    let header = new Headers({ 'Content-Type': 'application/json' });
-    return this.http.post(this.apiUrl + 'articles', body, { headers: header })
+    let userToken = localStorage.getItem('id_token');
+    let headers = new Headers({ 'Content-Type': 'application/json' });
+    headers.append('Authorization', userToken);
+    return this.http.post(this.apiUrl + 'articles', body, { headers: headers })
       .toPromise().then(response => response).catch(this.handleError);
   }
 
 
   putArticle(article: Article) {
     let body = JSON.stringify(article);
-    let header = new Headers({ 'Content-Type': 'application/json' });
-    return this.http.put(this.apiUrl + 'articles/' + article._id, body, { headers: header })
+    let userToken = localStorage.getItem('id_token');
+    let headers = new Headers({ 'Content-Type': 'application/json' });
+    headers.append('Authorization', userToken);
+    return this.http.put(this.apiUrl + 'articles/' + article._id, body, { headers: headers })
       .toPromise().then(response => response).catch(this.handleError);
   }
 
   deleteArticle(articleId: String) {
     let article = { '_id': articleId };
     let body = JSON.stringify(article);
+    let userToken = localStorage.getItem('id_token');
     let headers = new Headers({ 'Content-Type': 'application/json' });
+    headers.append('Authorization', userToken);
     return this.http.delete(this.apiUrl + 'articles/' + articleId, new RequestOptions({
       headers: headers,
       body: body
@@ -73,7 +80,6 @@ export class ArticleService {
     let body = JSON.stringify(comment);
     let header = new Headers({ 'Content-Type': 'application/json' });
     return this.http.post(this.apiUrl + 'articles' + '/' + id + '/comments', body, { headers: header }).toPromise().then(response => {
-      console.log(response.status);
     }).catch(this.handleError);
   }
 
@@ -104,7 +110,6 @@ export class ArticleService {
         .toPromise().then(response => {
           this.socketIOService.pushNotificationToUsers(participantsId);
         }).catch(this.handleError);
-
     }
   }
 
@@ -114,7 +119,32 @@ export class ArticleService {
   }
 
 
+  getTrendingLatestArticles(categoryId: string, isLatest: boolean): Promise<Article[]> {
+    let url = '';
+    if (isLatest == true) {
+      url = this.apiUrl + 'categories/' + categoryId + '/articles/latest';
+    } else {
+      url = this.apiUrl + 'categories/' + categoryId + '/articles/trending';
+    }
+    return this.http.get(url).toPromise().then(response => response.json()).catch(this.handleError);
+  }
 
+  getSearchedArticles(query: string): Promise<any> {
+    let url = this.apiUrl + "articles/search";
+    let requestOptions = new RequestOptions();
+    let params: URLSearchParams = new URLSearchParams();
+    params.set('q', query);
+    requestOptions.params = params;
+    return this.http.get(url, requestOptions).toPromise().then(response => response.json()).catch(this.handleError);
+  }
+
+  getAWSKey(): Promise<any> {
+    let url = this.apiUrl + "technical/keys/aws";
+    let userToken = localStorage.getItem('id_token');
+    let headers = new Headers({ 'Content-Type': 'application/json' });
+    headers.append('Authorization', userToken);
+    return this.http.get(url, {headers: headers}).toPromise().then(res => res.json()).catch(this.handleError);
+  }
 
   // Time Converting Methods ---------------------------- //
   getTimeDistance(Post_TimeStamp: string): string {
